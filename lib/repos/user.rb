@@ -1,22 +1,18 @@
 module Repos
   class User < Base
-    def initialize
-    end
-
     def find(id)
-      to_singular conn.filter(id: id).first
-    end
-
-    def all
-      to_array conn.all
+      query do
+        # select :users
+        where users: { id: id }
+      end
     end
 
     def find_with_posts(id)
-      conn.select {
-          Physical::User.scoped_attrs | Physical::Post.scoped_attrs
-        }
-        .where(users__id: id)
-        .left_join(:posts, user_id: :id)
+      query do
+        # select :users, :posts
+        where users: { id: id }
+        left_join :posts, user_id: :id
+      end
     end
 
     def persist(user)

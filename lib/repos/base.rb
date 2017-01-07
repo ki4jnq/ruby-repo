@@ -1,9 +1,22 @@
 module Repos
   class Base
-    private
+    def initialize
+    end
+
+    def all
+      to_array conn.all
+    end
+
+    # private
     def conn
-      return @conn if @conn
       @conn ||= Sequel::Model.db[class_sym]
+    end
+
+    def query(&block)
+      return conn if block.nil?
+      dsl = QueryDsl.new(conn)
+      dsl.instance_eval(&block)
+      to_array dsl.set
     end
 
     def to_singular(dataset)

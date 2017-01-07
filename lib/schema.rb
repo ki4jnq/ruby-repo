@@ -1,26 +1,45 @@
 module Schema
-  def self.included(base)
-    base.send :extend, ClassMethods
+  class << self
+    attr_reader :tables
+
+    def tables
+      @tables ||= {}
+    end
+
+    def included(base)
+      base.send :extend, ClassMethods
+    end
   end
 
   module ClassMethods
     attr_accessor :table_name
 
     def define_table(name, &block)
+      Schema.tables[name] = self
+
       self.table_name = name
-      Dsl.new(self).instance_eval &block
+      SchemaDsl.new(self).instance_eval &block
     end
 
-    def attrs
-      @_schema_attrs
+    def attributes
+      @schema_attrs
     end
 
-    def scoped_attrs
-      @scoped_attrs ||= attrs.map { |e| "#{table_name}__#{e}___#{alias_for(e)}".to_sym }
+    def scoped_attrs_with_alias
+      @scoped_attrs_with_alias ||= attributes.map { |e| scope_attr_with_alias e }
     end
 
+    def scope_attr_with_alias(attr)
+      "#{scope_attr(attr)}___#{alias_for(attr)}".to_sym
+    end
+
+    def scope_attr(attr)
+      "#{table_name}__#{attr}".to_sym
+    end
+
+    protected
     def alias_for(attr)
-      "#{table_name}_#{attr}"
+      "#{table_name}_#{attr}".to_sym
     end
 
     def class_sym
@@ -39,15 +58,15 @@ module Schema
     end
 
     def get_attrs_for(klass)
-      schema_attrs = klass.instance_variable_get :@_schema_attrs
+      schema_attrs = klass.instance_variable_get :@schema_attrs
       if schema_attrs.nil?
-        schema_attrs = klass.instance_variable_set :@_schema_attrs, Set.new
+        schema_attrs = klass.instance_variable_set :@schema_attrs, Set.new
       end
       schema_attrs
     end
   end
 
-  class Dsl
+  class SchemaDsl
     include Util
 
     def initialize(klass)
