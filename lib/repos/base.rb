@@ -16,7 +16,8 @@ module Repos
       return conn if block.nil?
       dsl = QueryDsl.new(conn)
       dsl.instance_eval(&block)
-      to_array dsl.set
+      #to_array dsl.set
+      dsl.set
     end
 
     def to_singular(dataset)

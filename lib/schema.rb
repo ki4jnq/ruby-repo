@@ -1,9 +1,15 @@
 module Schema
   class << self
-    attr_reader :tables
+    attr_reader :tables, :relations
 
+    # A mapping of all tables to the physical models.
     def tables
       @tables ||= {}
+    end
+
+    # A list of all relations of all tables everywhere.
+    def relations
+      @relations ||= {}
     end
 
     def included(base)
@@ -19,6 +25,19 @@ module Schema
 
       self.table_name = name
       SchemaDsl.new(self).instance_eval &block
+    end
+
+    def has_many(model_name)
+      add_relationship model_name, :has_many
+    end
+
+    def belongs_to(model_name)
+      add_relationship model_name, :belongs_to
+    end
+
+    def add_relationship(model_name, type)
+      Schema.relations[self.table_name] ||= {}
+      Schema.relations[self.table_name][model_name] = type
     end
 
     def attributes

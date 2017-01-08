@@ -8,5 +8,7 @@ module Physical
       string :title
       text :body
     end
+
+    belongs_to :users
   end
 end

@@ -9,9 +9,9 @@ module Repos
 
     def find_with_posts(id)
       query do
-        # select :users, :posts
+        select :users, :posts
         where users: { id: id }
-        left_join :posts, user_id: :id
+        join :posts, user_id: :id
       end
     end
 

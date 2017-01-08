@@ -8,5 +8,7 @@ module Physical
       string :email
       string :password
     end
+
+    has_many :posts
   end
 end
