@@ -25,7 +25,6 @@ module Repos
           final[physical.scope_attr(field)] = condition
         end
       end
-      puts final
       self.set = set.where final
     end
     alias and where
