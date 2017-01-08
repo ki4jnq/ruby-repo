@@ -1,5 +1,7 @@
 module Repos
   class DependencyResolver
+    attr_accessor :objects, :dependencies, :tables
+
     def initialize(tables, initial)
       # TODO: Infer this from the query.
       self.tables = tables
@@ -9,12 +11,9 @@ module Repos
       resolve initial
     end
 
-    def resolved
-      self.objects
+    def tree
+      [self.objects, self.dependencies]
     end
-
-    #protected
-    attr_accessor :objects, :dependencies, :tables
 
     private
 
@@ -34,9 +33,6 @@ module Repos
         end
       end
 
-      puts "Tables to be queried"
-      p tables
-
       # Step #2, build all of the objects
 
       # Push everything into the 'objects' array and record
@@ -53,9 +49,6 @@ module Repos
           objects[key] ||= data
           in_row << [key, data]
         end
-
-        puts "Data in row"
-        p in_row
 
         # Record the dependencies for all items in this row of data.
         in_row.each_with_index do |pair, idx|

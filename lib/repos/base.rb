@@ -7,16 +7,16 @@ module Repos
       to_array conn.all
     end
 
-    # private
+    private
     def conn
       @conn ||= Sequel::Model.db[class_sym]
     end
 
-    def query(&block)
+    def query(*tables, &block)
       return conn if block.nil?
       dsl = QueryDsl.new(conn)
       dsl.instance_eval(&block)
-      #to_array dsl.set
+      res
       dsl.set
     end
 

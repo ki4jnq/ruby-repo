@@ -1,15 +1,13 @@
 module Repos
   class User < Base
     def find(id)
-      query do
-        # select :users
+      query :users do
         where users: { id: id }
       end
     end
 
     def find_with_posts(id)
-      query do
-        select :users, :posts
+      query :users, :posts do
         where users: { id: id }
         join :posts, user_id: :id
       end
