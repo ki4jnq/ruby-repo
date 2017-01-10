@@ -12,6 +12,13 @@ module Schema
       @relations ||= {}
     end
 
+    def scoped_fields_for(tables:)
+      Schema.tables
+        .select { |k, v| tables.include? k }
+        .map { |name, physical| physical.scoped_attrs_with_alias }
+        .inject(:|)
+    end
+
     def included(base)
       base.send :extend, ClassMethods
     end

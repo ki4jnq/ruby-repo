@@ -28,13 +28,14 @@ module Repos
       return conn if block.nil?
       tables = tables.empty? ? [table_name] : tables
 
-      dsl = QueryDsl.new conn
+      dsl = QueryDsl.new conn, tables
       dsl.instance_eval &block
+      return dsl.set if tables.length > 1
 
       return to_array dsl.set if tables.length == 1
 
-      dr = DependencyResolver.new tables, dsl.set
-      dr.resolve_for table: table_name, map: tables.inject({}) { |m, table|
+      dr = DependencyResolver.new tables
+      dr.resolve dsl.set, map: tables.inject({}) { |m, table|
         m[table_name] = self.class.entity_class_for(table_name.to_s.capitalize.singularize)
         m
       }

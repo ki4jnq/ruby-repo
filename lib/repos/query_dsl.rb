@@ -2,17 +2,19 @@ module Repos
   class QueryDsl
     attr_accessor :set
 
-    def initialize(connection)
+    def initialize(connection, tables)
       self.set = connection
+
+      if tables.length > 1
+        # If we are loading data from multiple tables, then we
+        # need to scope the fields by there table names.
+        self.set = set.select do
+          Schema.scoped_fields_for tables: tables
+        end
+      end
     end
 
     def select(*tables) # TODO: Should be fields, not tables.
-      self.set = set.select do
-        Schema.tables
-          .select { |k, v| tables.include? k }
-          .map { |name, physical| physical.scoped_attrs_with_alias }
-          .inject(:|)
-      end
     end
 
     def where(conditions)

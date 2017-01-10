@@ -9,35 +9,14 @@ module Repos
       resolve initial
     end
 
-    def tree
-      [self.objects, self.dependencies]
+    def resolved
+      self.objects
     end
 
-    def resolve_for(table:, map:)
-      p objects
-      p map
-      p dependencies
-      objects.fetch(table) do
-        raise "Couldn't find table \"#{table}\" in object list"
-      end.map do |key, val|
-        klass = map[key]
-        entity = klass.new val
-        other_klass = map[key]
-        add_dependencies! key, entity, map
-      end
-    end
-
-    protected
+    #protected
     attr_accessor :objects, :dependencies, :tables
 
     private
-    def add_dependencies!(key, entity, klass)
-      dependencies.fetch(key, {}).each do |dep_table, deps|
-        deps.each do |dep_key|
-          entity.public_send "#{dep_table}=", 'notdoneyet'
-        end
-      end
-    end
 
     def resolve(initial)
       # Step #1, parse the input.
@@ -55,6 +34,9 @@ module Repos
         end
       end
 
+      puts "Tables to be queried"
+      p tables
+
       # Step #2, build all of the objects
 
       # Push everything into the 'objects' array and record
@@ -68,9 +50,12 @@ module Repos
           key = key_for data, table: tname
           #entity = entity_for data, table: tname
 
-          save_object key, data
+          objects[key] ||= data
           in_row << [key, data]
         end
+
+        puts "Data in row"
+        p in_row
 
         # Record the dependencies for all items in this row of data.
         in_row.each_with_index do |pair, idx|
@@ -86,7 +71,7 @@ module Repos
     end
 
     def check_deps(lkey, left, rkey, right)
-      lname, rname = [lkey, rkey].map { |key| key.first }
+      lname, rname = [lkey, rkey].map { |key| key.split('/').first }
       rel = Schema.relations.fetch(lname.to_sym, {})[rname.to_sym]
 
       puts "No relation for #{lname}-#{rname}" unless rel
@@ -104,15 +89,15 @@ module Repos
         # if the right side belongs to the left side.
         # TODO
       else
-        raise "Unrecognized relationship \"#{rel}\" for #{lname}-#{rname}"
+        # wth?
+        raise "Unrecognized relation ship \"#{rel}\" for #{lname}-#{rname}"
       end
     end
 
     def key_for(data, table:)
       # If the PK field is not present, assume every record to be unique.
-      # TODO: Shouldn't assume the PK field to be 'id'
-      p data
-      [table.to_s, data.fetch("#{table}_id".to_sym, rand(1_000_000_000_000)).to_s]
+      # TODO: Should assume the PK field to be 'id'
+      table.to_s + '/' + data.fetch("#{table}_id".to_sym, rand(1_000_000_000_000)).to_s
     end
 
     def entity_for(data, table:)
@@ -121,21 +106,11 @@ module Repos
     end
 
     def data_in(row, fields:)
-      p row
       fields.inject({}) do |m, k|
         v = row[k]
         m[k] = v if v
         m
       end
-    end
-
-    def lookup(key)
-      objects.fetch(key.first, {})[key.last]
-    end
-
-    def save_object(key, data)
-      objects[key.first] ||= {}
-      objects[key.first][key.last] = data
     end
   end
 end
