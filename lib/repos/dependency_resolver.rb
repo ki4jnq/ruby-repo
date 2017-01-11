@@ -1,12 +1,12 @@
 module Repos
   class DependencyResolver
-    def initialize(tables, initial)
+    def initialize(map:)
       # TODO: Infer this from the query.
-      self.tables = tables
+      self.map = map
       self.objects = {}
       self.dependencies = {}
 
-      resolve initial
+      #resolve initial
     end
 
     def resolved
@@ -14,9 +14,7 @@ module Repos
     end
 
     #protected
-    attr_accessor :objects, :dependencies, :tables
-
-    private
+    attr_accessor :objects, :dependencies, :map
 
     def resolve(initial)
       # Step #1, parse the input.
@@ -48,10 +46,10 @@ module Repos
         table_fields.each do |tname, fields|
           data = data_in row, fields: table_fields[tname]
           key = key_for data, table: tname
-          #entity = entity_for data, table: tname
+          entity = entity_for data, table: tname
 
-          objects[key] ||= data
-          in_row << [key, data]
+          objects[key] ||= entity
+          in_row << [key, entity]
         end
 
         puts "Data in row"
@@ -70,6 +68,8 @@ module Repos
       end
     end
 
+    private
+
     def check_deps(lkey, left, rkey, right)
       lname, rname = [lkey, rkey].map { |key| key.split('/').first }
       rel = Schema.relations.fetch(lname.to_sym, {})[rname.to_sym]
@@ -79,18 +79,28 @@ module Repos
 
       if rel == :belongs_to
         # If the left side belongs to the right side.
-        dependencies[rkey][lname] = lkey
+        dependencies[rkey][lname] = objects[lkey]
+        assign objects[lkey], to: objects[rkey], as: lname, singular: true
       elsif rel == :has_many
         # if the right side belongs to the left side.
-        dependencies[lkey] ||= {}
-        dependencies[lkey][rname] ||= []
-        dependencies[lkey][rname] << rkey
+        assign objects[rkey], to: objects[lkey], as: rname
       elsif rel == :has_one
         # if the right side belongs to the left side.
         # TODO
       else
         # wth?
         raise "Unrecognized relation ship \"#{rel}\" for #{lname}-#{rname}"
+      end
+    end
+
+    def assign(object, to:, as:, singular: false)
+      existing = to.send(as)
+      if rel == :has_many
+        to.send("#{as}=", []) if exising.nil?
+        to.send(as) << object
+      elsif rel == :has_one
+        to.send("#{as}=", object)
+      elsif rel == :belongs_to
       end
     end
 
@@ -101,8 +111,7 @@ module Repos
     end
 
     def entity_for(data, table:)
-      # TODO: Return an entity object (?)
-      data
+      map[table].new data
     end
 
     def data_in(row, fields:)
@@ -111,6 +120,10 @@ module Repos
         m[k] = v if v
         m
       end
+    end
+
+    def tables
+      map.keys
     end
   end
 end

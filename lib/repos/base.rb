@@ -34,11 +34,13 @@ module Repos
 
       return to_array dsl.set if tables.length == 1
 
-      dr = DependencyResolver.new tables
-      dr.resolve dsl.set, map: tables.inject({}) { |m, table|
-        m[table_name] = self.class.entity_class_for(table_name.to_s.capitalize.singularize)
+      dr = DependencyResolver.new map: tables.inject({}) { |m, table|
+        m[table_name] = self.class.entity_class_for(
+          table_name.to_s.capitalize.singularize
+        )
         m
       }
+      dr.resolve dsl.set
     end
 
     # def to_singular(dataset)
