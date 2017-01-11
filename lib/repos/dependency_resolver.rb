@@ -4,7 +4,6 @@ module Repos
       # TODO: Infer this from the query.
       self.map = map
       self.objects = {}
-      self.dependencies = {}
 
       #resolve initial
     end
@@ -14,7 +13,7 @@ module Repos
     end
 
     #protected
-    attr_accessor :objects, :dependencies, :map
+    attr_accessor :objects, :map
 
     def resolve(initial)
       # Step #1, parse the input.
@@ -52,10 +51,7 @@ module Repos
           in_row << [key, entity]
         end
 
-        puts "Data in row"
-        p in_row
-
-        # Record the dependencies for all items in this row of data.
+        # Set the dependencies for all items in this row.
         in_row.each_with_index do |pair, idx|
           key, val = *pair
 
@@ -79,7 +75,6 @@ module Repos
 
       if rel == :belongs_to
         # If the left side belongs to the right side.
-        dependencies[rkey][lname] = objects[lkey]
         assign objects[lkey], to: objects[rkey], as: lname, singular: true
       elsif rel == :has_many
         # if the right side belongs to the left side.
@@ -94,13 +89,12 @@ module Repos
     end
 
     def assign(object, to:, as:, singular: false)
-      existing = to.send(as)
-      if rel == :has_many
-        to.send("#{as}=", []) if exising.nil?
+      puts "assigning #{object} to #{to} for a #{singular ? 'singular' : 'plural'} resource"
+      if singular
+        to.send "#{as}=", object
+      else
+        to.send "#{as}=", [] if to.send(as).nil?
         to.send(as) << object
-      elsif rel == :has_one
-        to.send("#{as}=", object)
-      elsif rel == :belongs_to
       end
     end
 
@@ -111,7 +105,12 @@ module Repos
     end
 
     def entity_for(data, table:)
-      map[table].new data
+      map[table].new.tap do |entity|
+        data.map do |k, v|
+          attr = k.to_s.split('_', 2).last + "="
+          entity.send attr, v
+        end
+      end
     end
 
     def data_in(row, fields:)
