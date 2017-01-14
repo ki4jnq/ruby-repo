@@ -31,7 +31,6 @@ module Repos
         end
       end
 
-      puts "Tables to be queried"
       p tables
 
       # Step #2, build all of the objects
@@ -57,6 +56,7 @@ module Repos
 
           in_row[idx..-1].each do |other_key, other_val|
             # Wire the dependencies both ways.
+            next if other_key == key # Don't check for self-relations.
             check_deps key, val, other_key, other_val
             check_deps other_key, other_val, key, val
           end
@@ -70,26 +70,14 @@ module Repos
       lname, rname = [lkey, rkey].map { |key| key.split('/').first }
       rel = Schema.relations.fetch(lname.to_sym, {})[rname.to_sym]
 
-      puts "No relation for #{lname}-#{rname}" unless rel
-      return unless rel
-
-      if rel == :belongs_to
-        # If the left side belongs to the right side.
-        assign objects[lkey], to: objects[rkey], as: lname, singular: true
+      if rel == :belongs_to || rel == :has_one
+        assign objects[rkey], to: objects[lkey], as: rname.singularize, singular: true
       elsif rel == :has_many
-        # if the right side belongs to the left side.
         assign objects[rkey], to: objects[lkey], as: rname
-      elsif rel == :has_one
-        # if the right side belongs to the left side.
-        # TODO
-      else
-        # wth?
-        raise "Unrecognized relation ship \"#{rel}\" for #{lname}-#{rname}"
       end
     end
 
     def assign(object, to:, as:, singular: false)
-      puts "assigning #{object} to #{to} for a #{singular ? 'singular' : 'plural'} resource"
       if singular
         to.send "#{as}=", object
       else
