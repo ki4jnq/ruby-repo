@@ -114,7 +114,7 @@ module Repos
     end
 
     def tables
-      map.keys
+      @tables ||= map.keys
     end
   end
 end

@@ -19,16 +19,12 @@ module Repos
       end
     end
 
-    private
-    def conn
-      @conn ||= Sequel::Model.db[class_sym]
-    end
-
+    protected
     def query(*tables, &block)
       return conn if block.nil?
       tables = tables.empty? ? [table_name] : tables
 
-      # Primary table tells the DependencyResolver what the top-level
+      # primary_table tells the DependencyResolver what the top-level
       # objects are.
       primary_table = tables.first
 
@@ -36,23 +32,38 @@ module Repos
       dsl = QueryDsl.new conn, tables
       dsl.instance_eval &block
 
-      return to_array dsl.set if tables.length == 1
+      class_map = entity_map_for tables
 
-      dr = DependencyResolver.new get: primary_table, map: entity_map_for(tables)
+      return to_array dsl.set if class_map.length <= 1
+
+      puts class_map
+      dr = DependencyResolver.new get: primary_table, map: class_map
       dr.call dsl.set
+    end
+
+    private
+    def conn
+      @conn ||= Sequel::Model.db[class_sym]
+    end
+
+    # Builds a hash of table-names => entity-classes.
+    def entity_map_for(tables)
+      return { table_name => self.class.entity_class } if tables.empty?
+
+      tables.inject({}) { |m, table|
+        if table.is_a? Hash
+          m.merge table
+        elsif [Symbol, String].include? table.class
+          m.merge table => self.class.entity_class_for(table.to_s.capitalize.singularize)
+        else
+          raise InvalidArgument.new "invalid argument to `query`"
+        end
+      }
     end
 
     # def to_singular(dataset)
     #   entity_class.new dataset
     # end
-
-    # Builds a hash of table-names => entity-classes.
-    def entity_map_for(tables)
-      tables.inject({}) do |m, table|
-        m[table] = self.class.entity_class_for table.to_s.capitalize.singularize
-        m
-      end
-    end
 
     def to_array(dataset)
       dataset.map do |row|
@@ -75,6 +86,10 @@ module Repos
     def entity_class
       # This should be set once per application run.
       @entity_class ||= self.class.entity_class_for class_name
+    end
+
+    def entity_class_sym
+      @entity_class_sym ||= class_sym # TODO: This is wrong
     end
   end
 end

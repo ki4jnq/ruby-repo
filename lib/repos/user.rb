@@ -14,6 +14,7 @@ module Repos
     end
 
     def find_with_posts(id)
+      #query users: Entities::User, posts: Entities::Post do
       query :users, :posts do
         where users: { id: id }
         left_outer_join :posts, user_id: :id
