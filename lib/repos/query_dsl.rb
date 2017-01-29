@@ -31,7 +31,7 @@ module Repos
     end
     alias and where
 
-    [:left_join, :join].each do |method_name|
+    [:left_outer_join, :left_join, :join].each do |method_name|
       define_method method_name do |*args|
         self.set = set.public_send method_name, *args
       end

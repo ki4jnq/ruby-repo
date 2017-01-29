@@ -1,19 +1,17 @@
 module Repos
   class DependencyResolver
-    def initialize(map:)
-      # TODO: Infer this from the query.
+    def initialize(get:, map:)
+      raise ArgumentError.new("You must specify a `get` parameter") unless get
+      raise ArgumentError.new("You must specify a `map` parameter") unless map
+
       self.map = map
-      self.objects = {}
-
-      #resolve initial
+      self.target = get
     end
 
-    def resolved
-      self.objects
-    end
-
-    def resolve(initial)
+    def call(initial)
       # Step #1, parse the input.
+      objects = {}
+      targets = []
 
       # Returns an object who's keys are table names and whos
       # values are are empty arrays.
@@ -28,8 +26,6 @@ module Repos
         end
       end
 
-      p tables
-
       # Step #2, build all of the objects
 
       # Push everything into the 'objects' array and record
@@ -43,7 +39,10 @@ module Repos
           key = key_for data, table: tname
           entity = entity_for data, table: tname
 
-          objects[key] ||= entity
+          unless objects[key]
+            objects[key] ||= entity
+            targets << entity if tname == self.target
+          end
           in_row << [key, entity]
         end
 
@@ -54,19 +53,20 @@ module Repos
           in_row[idx..-1].each do |other_key, other_val|
             # Wire the dependencies both ways.
             next if other_key == key # Don't check for self-relations.
-            check_deps key, val, other_key, other_val
-            check_deps other_key, other_val, key, val
+            check_deps key, val, other_key, other_val, objects
+            check_deps other_key, other_val, key, val, objects
           end
         end
       end
+
+      targets
     end
 
     protected
-    attr_accessor :objects, :map
+    attr_accessor :map, :target
 
     private
-
-    def check_deps(lkey, left, rkey, right)
+    def check_deps(lkey, left, rkey, right, objects)
       lname, rname = [lkey, rkey].map { |key| key.split('/').first }
       rel = Schema.relations.fetch(lname.to_sym, {})[rname.to_sym]
 
@@ -97,7 +97,7 @@ module Repos
     end
 
     def entity_for(data, table:)
-      map[table].new.tap do |entity|
+      self.map[table].new.tap do |entity|
         data.map do |k, v|
           attr = k.to_s.split('_', 2).last + "="
           entity.send attr, v

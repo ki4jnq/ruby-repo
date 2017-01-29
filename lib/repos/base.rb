@@ -28,22 +28,31 @@ module Repos
       return conn if block.nil?
       tables = tables.empty? ? [table_name] : tables
 
+      # Primary table tells the DependencyResolver what the top-level
+      # objects are.
+      primary_table = tables.first
+
+      # Evaluate the query block in the context of the DSL object.
       dsl = QueryDsl.new conn, tables
       dsl.instance_eval &block
-      return dsl.set if tables.length > 1
 
       return to_array dsl.set if tables.length == 1
 
-      dr = DependencyResolver.new map: tables.inject({}) { |m, table|
-        m[table_name] = self.class.entity_class_for table_name.to_s.capitalize.singularize
-        m
-      }
-      dr.resolve dsl.set
+      dr = DependencyResolver.new get: primary_table, map: entity_map_for(tables)
+      dr.call dsl.set
     end
 
     # def to_singular(dataset)
     #   entity_class.new dataset
     # end
+
+    # Builds a hash of table-names => entity-classes.
+    def entity_map_for(tables)
+      tables.inject({}) do |m, table|
+        m[table] = self.class.entity_class_for table.to_s.capitalize.singularize
+        m
+      end
+    end
 
     def to_array(dataset)
       dataset.map do |row|
