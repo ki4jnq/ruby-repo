@@ -12,9 +12,6 @@ module Repos
       self.objects
     end
 
-    #protected
-    attr_accessor :objects, :map
-
     def resolve(initial)
       # Step #1, parse the input.
 
@@ -64,16 +61,23 @@ module Repos
       end
     end
 
+    protected
+    attr_accessor :objects, :map
+
     private
 
     def check_deps(lkey, left, rkey, right)
       lname, rname = [lkey, rkey].map { |key| key.split('/').first }
       rel = Schema.relations.fetch(lname.to_sym, {})[rname.to_sym]
 
-      if rel == :belongs_to || rel == :has_one
+      if rel == :belongs_to
         assign objects[rkey], to: objects[lkey], as: rname.singularize, singular: true
       elsif rel == :has_many
         assign objects[rkey], to: objects[lkey], as: rname
+      elsif rel == :has_one
+        assign objects[lkey], to: objects[rkey], as: lname, singular: true
+      else
+        raise "Unrecognized relationship \"#{rel}\" for #{lname}-#{rname}"
       end
     end
 
