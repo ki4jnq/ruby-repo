@@ -1,4 +1,6 @@
 module Repos
+  # Most methods in QueryDsl will map very directly to methods in the
+  # Seqel gem.
   class QueryDsl
     attr_accessor :set
 

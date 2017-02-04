@@ -8,7 +8,7 @@ module Repos
 
     def find_new_users
       query do
-        left_join :posts, user_id: :id
+        left_outer_join :posts, user_id: :id
         where posts: { id: nil }
       end
     end
