@@ -1,5 +1,7 @@
 module Repos
   class Post < Base
+    persisted_attributes :id, :title, :body
+
     def find(id)
       query do
         where posts: { id: id }

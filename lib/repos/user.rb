@@ -1,5 +1,7 @@
 module Repos
   class User < Base
+    persisted_attributes :id, :name, :email, :password
+
     def find(id)
       query do
         where users: { id: id }
@@ -17,7 +19,7 @@ module Repos
       #query users: Entities::User, posts: Entities::Post do
       query :users, :posts do
         where users: { id: id }
-        left_outer_join :posts, user_id: :id
+        left_join :posts, user_id: :id
       end
     end
   end

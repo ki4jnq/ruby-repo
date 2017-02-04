@@ -36,6 +36,12 @@ module Repos
         # Read a single row and store the results, by table, in `in_row`.
         table_fields.each do |tname, fields|
           data = data_in row, fields: table_fields[tname]
+
+          # Skip it if the primary key is null.
+          # TODO: Shouldn't assume the primary key is `id`
+          # TODO: Need a cleaner way to get the primary key value.
+          next if data["#{tname}_id".to_sym].nil?
+
           key = key_for data, table: tname
           entity = entity_for data, table: tname
 

@@ -7,22 +7,40 @@ module Repos
     def initialize
     end
 
+    class << self
+      def persisted_attributes(*args)
+        unless args.empty?
+          @persisted_attributes = args
+        else
+          @persisted_attributes || []
+        end
+      end
+    end
+
     def all
       to_array conn.all
     end
 
     def persist(resource)
       if resource.id
-        conn.where(id: resource.id).update(resource.attributes)
+        conn.where(id: resource.id).update(persisted_attrs_for(resource))
       else
-        conn.insert resource.attributes
+        conn.insert persisted_attrs_for(resource)
       end
     end
 
     protected
+    def persisted_attrs_for(resource)
+      self.class.persisted_attributes.inject({}) do |attrs, attr|
+        attrs[attr] = resource.public_send(attr); attrs
+      end
+    end
+
     def query(primary=table_name, *tables, &block)
       return conn if block.nil?
-      tables = tables.empty? ? [primary] : tables
+
+      # Prepend the primary table to the list of tables.
+      tables.unshift primary
 
       # Evaluate the query block in the context of the DSL object.
       dsl = QueryDsl.new conn, tables
@@ -30,9 +48,13 @@ module Repos
 
       class_map = entity_map_for tables
 
+      # If only one table is being queried for, do not perform dependency
+      # resolution.
+      # This may need to be removed to support self-relationships.
       return to_array dsl.set if class_map.length <= 1
 
-      DependencyResolver.new(get: primary_table, map: class_map).call(dsl.set)
+      # Walk the result set and wire up the dependencies.
+      DependencyResolver.new(get: primary, map: class_map).call(dsl.set)
     end
 
     private
